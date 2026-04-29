@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 79887585695198504}
+  - component: {fileID: 79887585695198505}
   m_Layer: 0
   m_Name: BankNPC
   m_TagString: Untagged
@@ -16,6 +17,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &79887585695198505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 807200762557657772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef8ac4c847c66bbc6e616549b54554e9, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  bankUI: {fileID: 0}
+  bankSystem: {fileID: 0}
+  interactRange: 5
+  promptUI: {fileID: 0}
+  interactKey: 101
 --- !u!4 &79887585695198504
 Transform:
   m_ObjectHideFlags: 0

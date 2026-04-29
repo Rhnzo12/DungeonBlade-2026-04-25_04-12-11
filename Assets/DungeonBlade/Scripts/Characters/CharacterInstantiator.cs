@@ -222,19 +222,35 @@ namespace DungeonBlade.Characters
             if (model == null) yield break;
 
             // 2. Foot-align (only if user didn't override modelOffset)
-            if (data.modelOffset == Vector3.zero)
+            if (data.modelOffset == Vector3.zero && model.transform.parent != null)
             {
-                Bounds b;
-                if (TryGetWorldBounds(model, out b) && model.transform.parent != null)
+                if (TryGetFootLocalY(model, out float footLocalY))
                 {
-                    Vector3 localBottom = model.transform.parent.InverseTransformPoint(
-                        new Vector3(b.center.x, b.min.y, b.center.z));
-                    if (Mathf.Abs(localBottom.y) > 0.02f)
+                    if (Mathf.Abs(footLocalY) > 0.02f)
                     {
                         var lp = model.transform.localPosition;
-                        lp.y -= localBottom.y;
+                        lp.y -= footLocalY;
                         model.transform.localPosition = lp;
-                        Debug.Log($"[CharacterInstantiator] Foot-aligned '{model.name}' by {-localBottom.y:F2}m (bottom was at local Y={localBottom.y:F2}).");
+                        Debug.Log($"[CharacterInstantiator] Foot-aligned '{model.name}' by {-footLocalY:F2}m via foot bone (was at local Y={footLocalY:F2}).");
+                    }
+                }
+                else
+                {
+                    // Fallback: mesh bounds. Less accurate for characters with
+                    // long coats / dresses (bounds bottom is the hem, not feet)
+                    // but works for stripped-down rigs without named foot bones.
+                    Bounds b;
+                    if (TryGetWorldBounds(model, out b))
+                    {
+                        Vector3 localBottom = model.transform.parent.InverseTransformPoint(
+                            new Vector3(b.center.x, b.min.y, b.center.z));
+                        if (Mathf.Abs(localBottom.y) > 0.02f)
+                        {
+                            var lp = model.transform.localPosition;
+                            lp.y -= localBottom.y;
+                            model.transform.localPosition = lp;
+                            Debug.Log($"[CharacterInstantiator] Foot-aligned '{model.name}' by {-localBottom.y:F2}m via bounds fallback.");
+                        }
                     }
                 }
             }
@@ -254,17 +270,55 @@ namespace DungeonBlade.Characters
                 float ratio = data.targetHeight / b.size.y;
                 if (ratio < 0.95f || ratio > 1.05f) model.transform.localScale *= ratio;
             }
-            if (data.modelOffset == Vector3.zero && TryGetWorldBounds(model, out b) && model.transform.parent != null)
+            if (data.modelOffset == Vector3.zero && model.transform.parent != null)
             {
-                Vector3 localBottom = model.transform.parent.InverseTransformPoint(
-                    new Vector3(b.center.x, b.min.y, b.center.z));
-                if (Mathf.Abs(localBottom.y) > 0.02f)
+                if (TryGetFootLocalY(model, out float footLocalY) && Mathf.Abs(footLocalY) > 0.02f)
                 {
                     var lp = model.transform.localPosition;
-                    lp.y -= localBottom.y;
+                    lp.y -= footLocalY;
                     model.transform.localPosition = lp;
                 }
+                else if (TryGetWorldBounds(model, out b))
+                {
+                    Vector3 localBottom = model.transform.parent.InverseTransformPoint(
+                        new Vector3(b.center.x, b.min.y, b.center.z));
+                    if (Mathf.Abs(localBottom.y) > 0.02f)
+                    {
+                        var lp = model.transform.localPosition;
+                        lp.y -= localBottom.y;
+                        model.transform.localPosition = lp;
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// Returns the lowest foot/toe bone's Y position in the model parent's
+        /// local space — i.e. how far above (positive) or below (negative) the
+        /// player root the model's actual feet are. Picks the lowest of the
+        /// usual Mixamo / generic-humanoid bone names.
+        /// </summary>
+        static bool TryGetFootLocalY(GameObject model, out float localY)
+        {
+            string[] footBoneNames = {
+                "mixamorig:LeftToe_End", "mixamorig:RightToe_End",
+                "mixamorig:LeftToeBase", "mixamorig:RightToeBase",
+                "mixamorig:LeftFoot",    "mixamorig:RightFoot",
+                "LeftToe_End",  "RightToe_End",
+                "LeftToeBase",  "RightToeBase",
+                "LeftFoot",     "RightFoot",
+            };
+            float lowest = float.MaxValue;
+            foreach (var name in footBoneNames)
+            {
+                var bone = FindDeepChild(model.transform, name);
+                if (bone == null) continue;
+                Vector3 lp = model.transform.parent.InverseTransformPoint(bone.position);
+                if (lp.y < lowest) lowest = lp.y;
+            }
+            if (lowest == float.MaxValue) { localY = 0f; return false; }
+            localY = lowest;
+            return true;
         }
 
         static bool TryGetWorldBounds(GameObject root, out Bounds bounds)
