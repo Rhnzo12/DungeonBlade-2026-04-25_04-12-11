@@ -33,6 +33,9 @@ namespace DungeonBlade.Characters
         public Button closeButton;
 
         [Header("Config")]
+        [Tooltip("If true, ALWAYS open the selector when the lobby loads — even if a character was previously chosen. GunZ-style entry screen.")]
+        public bool openOnSceneLoad = true;
+        [Tooltip("If true, only auto-open when no character has been picked before. Falls back when openOnSceneLoad is false.")]
         public bool openAutomaticallyIfNoSelection = true;
         public bool closeOnConfirm = true;
 
@@ -67,10 +70,13 @@ namespace DungeonBlade.Characters
             pendingSelection = roster.Current;
             UpdateDetails(pendingSelection);
 
-            if (openAutomaticallyIfNoSelection && !PlayerPrefs.HasKey("DungeonBlade.SelectedCharacterId"))
-                Open();
-            else
-                rootPanel.SetActive(false);
+            // Decide whether to auto-open. GunZ-style: always open on entry to
+            // the lobby so the player picks/confirms each play session. Players
+            // can also reopen via the CharacterChangeNPC.
+            bool shouldOpen = openOnSceneLoad
+                              || (openAutomaticallyIfNoSelection && !PlayerPrefs.HasKey("DungeonBlade.SelectedCharacterId"));
+            if (shouldOpen) Open();
+            else if (rootPanel != null) rootPanel.SetActive(false);
         }
 
         void Populate()

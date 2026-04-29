@@ -276,6 +276,23 @@ namespace DungeonBlade.EditorTools
 
         public static GameObject BuildCharacterSelectCanvas(Transform sceneParent = null)
         {
+            // Layout (GunZ-inspired):
+            //   ┌──────────────── CHOOSE YOUR CHAMPION ────────────────┐
+            //   │                                          ┌──────────┐│
+            //   │                                          │ ▣ Kael   ││  <- right sidebar list
+            //   │           ┌─────────────────┐            │ ▣ Roan   ││
+            //   │           │                 │            │ ▣ Shade  ││
+            //   │           │   PORTRAIT      │            │ ▣ Lyra ✓ ││
+            //   │           │   PREVIEW       │            │ ▣ Vex    ││
+            //   │           │                 │            │ ▣ Nyx    ││
+            //   │           └─────────────────┘            └──────────┘│
+            //   │           ┌─────────────────┐                        │
+            //   │           │  Name • Level 1 │                        │
+            //   │           │  Flavor text    │                        │
+            //   │           │  Stat block     │                        │
+            //   │           └─────────────────┘                        │
+            //   │     [Cancel]              [        ENTER        ]    │
+            //   └────────────────────────────────────────────────────────┘
             var canvas = MakeCanvas("CharacterSelect_Canvas", sortOrder: 30);
             if (sceneParent != null) canvas.transform.SetParent(sceneParent, false);
 
@@ -285,105 +302,119 @@ namespace DungeonBlade.EditorTools
             var rootRT = root.GetComponent<RectTransform>();
             rootRT.anchorMin = Vector2.zero; rootRT.anchorMax = Vector2.one;
             rootRT.sizeDelta = Vector2.zero; rootRT.anchoredPosition = Vector2.zero;
-            root.GetComponent<Image>().color = new Color(0, 0, 0, 0.88f);
+            root.GetComponent<Image>().color = new Color(0, 0, 0, 0.92f);
 
-            // Title
-            var title = MakeText(root.transform, "Title", "CHOOSE YOUR CHAMPION", 34, TextAlignmentOptions.Center, bold: true);
+            // Title (top)
+            var title = MakeText(root.transform, "Title", "CHOOSE YOUR CHAMPION", 36, TextAlignmentOptions.Center, bold: true);
             var titleRT = title.GetComponent<RectTransform>();
             titleRT.anchorMin = new Vector2(0.5f, 1f); titleRT.anchorMax = new Vector2(0.5f, 1f);
             titleRT.pivot = new Vector2(0.5f, 1f);
-            titleRT.anchoredPosition = new Vector2(0, -40);
-            titleRT.sizeDelta = new Vector2(700, 50);
+            titleRT.anchoredPosition = new Vector2(0, -32);
+            titleRT.sizeDelta = new Vector2(900, 56);
             title.color = new Color(1f, 0.92f, 0.6f);
 
-            // Portrait row — horizontal layout
-            var rowBG = MakePanel(root.transform, "PortraitRowBG",
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0, 120), new Vector2(960, 180));
-            rowBG.GetComponent<Image>().color = new Color(0.08f, 0.08f, 0.12f, 0.7f);
+            // ── Right sidebar: vertical character list ──
+            var sidebar = MakePanel(root.transform, "CharacterSidebar",
+                new Vector2(1, 1), new Vector2(1, 1), new Vector2(-30, -110), new Vector2(280, 600));
+            sidebar.GetComponent<RectTransform>().pivot = new Vector2(1, 1);
+            sidebar.GetComponent<Image>().color = new Color(0.06f, 0.06f, 0.10f, 0.85f);
 
-            var row = new GameObject("PortraitRow");
-            row.transform.SetParent(rowBG.transform, false);
-            var rowLayout = row.AddComponent<HorizontalLayoutGroup>();
-            rowLayout.spacing = 12;
-            rowLayout.padding = new RectOffset(16, 16, 16, 16);
-            rowLayout.childAlignment = TextAnchor.MiddleCenter;
-            rowLayout.childControlHeight = true; rowLayout.childControlWidth = false;
-            rowLayout.childForceExpandWidth = false; rowLayout.childForceExpandHeight = true;
-            var rowRT = row.GetComponent<RectTransform>();
-            rowRT.anchorMin = Vector2.zero; rowRT.anchorMax = Vector2.one;
-            rowRT.sizeDelta = Vector2.zero; rowRT.anchoredPosition = Vector2.zero;
+            var list = new GameObject("List");
+            list.transform.SetParent(sidebar.transform, false);
+            var listLayout = list.AddComponent<VerticalLayoutGroup>();
+            listLayout.spacing = 6;
+            listLayout.padding = new RectOffset(8, 8, 8, 8);
+            listLayout.childControlHeight = false; listLayout.childControlWidth = true;
+            listLayout.childForceExpandHeight = false; listLayout.childForceExpandWidth = true;
+            var listFitter = list.AddComponent<ContentSizeFitter>();
+            listFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var listRT = list.GetComponent<RectTransform>();
+            listRT.anchorMin = new Vector2(0, 1); listRT.anchorMax = new Vector2(1, 1);
+            listRT.pivot = new Vector2(0.5f, 1f);
+            listRT.anchoredPosition = Vector2.zero; listRT.sizeDelta = new Vector2(0, 0);
 
-            // Detail panel (below portrait row)
-            var detail = MakePanel(root.transform, "DetailPanel",
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                new Vector2(0, -140), new Vector2(700, 280));
-            detail.GetComponent<Image>().color = new Color(0.1f, 0.1f, 0.14f, 0.85f);
+            // ── Center: large portrait preview ──
+            var preview = new GameObject("PortraitPreview");
+            preview.transform.SetParent(root.transform, false);
+            var previewImg = preview.AddComponent<Image>();
+            previewImg.preserveAspect = true;
+            previewImg.color = new Color(0.3f, 0.35f, 0.45f, 0.85f);
+            var prRT = preview.GetComponent<RectTransform>();
+            prRT.anchorMin = new Vector2(0.5f, 0.5f); prRT.anchorMax = new Vector2(0.5f, 0.5f);
+            prRT.pivot = new Vector2(0.5f, 0.5f);
+            prRT.anchoredPosition = new Vector2(-160, 80);   // slightly left + above center
+            prRT.sizeDelta = new Vector2(420, 540);
 
-            var detailPortrait = new GameObject("DetailPortrait");
-            detailPortrait.transform.SetParent(detail.transform, false);
-            var dpImg = detailPortrait.AddComponent<Image>();
-            dpImg.color = new Color(0.3f, 0.35f, 0.45f, 0.8f);
-            var dpRT = detailPortrait.GetComponent<RectTransform>();
-            dpRT.anchorMin = new Vector2(0, 0.5f); dpRT.anchorMax = new Vector2(0, 0.5f);
-            dpRT.pivot = new Vector2(0, 0.5f);
-            dpRT.anchoredPosition = new Vector2(20, 0);
-            dpRT.sizeDelta = new Vector2(200, 240);
+            // ── Bottom-center: name / flavor / stats card + Enter button ──
+            var card = MakePanel(root.transform, "InfoCard",
+                new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-160, 110), new Vector2(560, 220));
+            card.GetComponent<RectTransform>().pivot = new Vector2(0.5f, 0);
+            card.GetComponent<Image>().color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
 
-            var detailName = MakeText(detail.transform, "Name", "Character Name", 24, TextAlignmentOptions.Left, bold: true);
+            var detailName = MakeText(card.transform, "Name", "Character Name", 28, TextAlignmentOptions.Center, bold: true);
             var nameRT = detailName.GetComponent<RectTransform>();
             nameRT.anchorMin = new Vector2(0, 1); nameRT.anchorMax = new Vector2(1, 1);
-            nameRT.pivot = new Vector2(0, 1);
-            nameRT.anchoredPosition = new Vector2(240, -20);
-            nameRT.sizeDelta = new Vector2(440, 32);
+            nameRT.pivot = new Vector2(0.5f, 1);
+            nameRT.anchoredPosition = new Vector2(0, -10);
+            nameRT.sizeDelta = new Vector2(0, 36);
             detailName.color = new Color(1f, 0.92f, 0.6f);
 
-            var detailFlavor = MakeText(detail.transform, "Flavor", "Flavor text appears here.", 14, TextAlignmentOptions.TopLeft);
+            var detailFlavor = MakeText(card.transform, "Flavor", "Flavor text appears here.", 14, TextAlignmentOptions.Center);
             var flavRT = detailFlavor.GetComponent<RectTransform>();
             flavRT.anchorMin = new Vector2(0, 1); flavRT.anchorMax = new Vector2(1, 1);
-            flavRT.pivot = new Vector2(0, 1);
-            flavRT.anchoredPosition = new Vector2(240, -60);
-            flavRT.sizeDelta = new Vector2(440, 60);
+            flavRT.pivot = new Vector2(0.5f, 1);
+            flavRT.anchoredPosition = new Vector2(0, -52);
+            flavRT.sizeDelta = new Vector2(-30, 60);
             detailFlavor.color = new Color(0.85f, 0.85f, 0.9f);
 
-            var detailStats = MakeText(detail.transform, "Stats", "Balanced stats", 14, TextAlignmentOptions.TopLeft);
+            var detailStats = MakeText(card.transform, "Stats", "Balanced stats", 13, TextAlignmentOptions.Center);
             var statsRT = detailStats.GetComponent<RectTransform>();
             statsRT.anchorMin = new Vector2(0, 1); statsRT.anchorMax = new Vector2(1, 1);
-            statsRT.pivot = new Vector2(0, 1);
-            statsRT.anchoredPosition = new Vector2(240, -130);
-            statsRT.sizeDelta = new Vector2(440, 100);
+            statsRT.pivot = new Vector2(0.5f, 1);
+            statsRT.anchoredPosition = new Vector2(0, -120);
+            statsRT.sizeDelta = new Vector2(-30, 80);
+            detailStats.color = new Color(0.7f, 0.85f, 1f);
 
-            // Buttons
-            var btnConfirm = MakeButton(detail.transform, "ConfirmButton", "Confirm Selection");
+            // Big ENTER button (bottom center, like GunZ)
+            var btnConfirm = MakeButton(root.transform, "EnterButton", "ENTER");
             var cbRT = btnConfirm.GetComponent<RectTransform>();
-            cbRT.anchorMin = new Vector2(1, 0); cbRT.anchorMax = new Vector2(1, 0);
-            cbRT.pivot = new Vector2(1, 0);
-            cbRT.anchoredPosition = new Vector2(-20, 20);
-            cbRT.sizeDelta = new Vector2(200, 42);
-            btnConfirm.GetComponent<Image>().color = new Color(0.2f, 0.6f, 0.3f, 1f);
+            cbRT.anchorMin = new Vector2(0.5f, 0); cbRT.anchorMax = new Vector2(0.5f, 0);
+            cbRT.pivot = new Vector2(0.5f, 0);
+            cbRT.anchoredPosition = new Vector2(-160, 50);
+            cbRT.sizeDelta = new Vector2(360, 56);
+            btnConfirm.GetComponent<Image>().color = new Color(0.85f, 0.65f, 0.15f, 1f);   // gold/yellow like GunZ
+            var enterLabel = btnConfirm.GetComponentInChildren<TMP_Text>();
+            if (enterLabel != null)
+            {
+                enterLabel.fontSize = 22;
+                enterLabel.fontStyle = FontStyles.Bold;
+                enterLabel.color = new Color(0.1f, 0.08f, 0.02f);
+            }
 
-            var btnClose = MakeButton(detail.transform, "CloseButton", "Cancel");
+            // Small Cancel (top-right of card area, low priority)
+            var btnClose = MakeButton(root.transform, "CloseButton", "Cancel");
             var xbRT = btnClose.GetComponent<RectTransform>();
             xbRT.anchorMin = new Vector2(0, 0); xbRT.anchorMax = new Vector2(0, 0);
             xbRT.pivot = new Vector2(0, 0);
-            xbRT.anchoredPosition = new Vector2(20, 20);
-            xbRT.sizeDelta = new Vector2(140, 42);
-            btnClose.GetComponent<Image>().color = new Color(0.4f, 0.2f, 0.2f, 1f);
+            xbRT.anchoredPosition = new Vector2(30, 30);
+            xbRT.sizeDelta = new Vector2(120, 36);
+            btnClose.GetComponent<Image>().color = new Color(0.3f, 0.18f, 0.18f, 1f);
 
-            // Portrait button prefab — simple button w/ image + name
+            // Sidebar row prefab — wider than the old grid card
             var portraitPrefab = BuildPortraitButtonPrefab();
 
             // Wire up the CharacterSelectUI component
             var selectUI = canvas.AddComponent<DungeonBlade.Characters.CharacterSelectUI>();
             selectUI.rootPanel = root;
-            selectUI.portraitRowParent = row.transform;
+            selectUI.portraitRowParent = list.transform;
             selectUI.portraitButtonPrefab = portraitPrefab;
-            selectUI.detailPortrait = dpImg;
+            selectUI.detailPortrait = previewImg;
             selectUI.detailName = detailName;
             selectUI.detailFlavor = detailFlavor;
             selectUI.detailStats = detailStats;
             selectUI.confirmButton = btnConfirm.GetComponent<Button>();
             selectUI.closeButton = btnClose.GetComponent<Button>();
+            selectUI.openOnSceneLoad = true;
 
             return canvas;
         }
@@ -395,25 +426,53 @@ namespace DungeonBlade.EditorTools
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             if (existing != null) AssetDatabase.DeleteAsset(path);
 
-            var go = new GameObject("CharacterPortraitButton");
-            var img = go.AddComponent<Image>();
-            img.color = new Color(0.18f, 0.2f, 0.28f, 1f);
-            img.raycastTarget = true;
+            // Sidebar row: 264 wide × 64 tall. Portrait swatch on the left,
+            // bold name label spanning the rest. Driven by VerticalLayoutGroup
+            // in the parent — childForceExpandWidth lets each row stretch.
+            var go = new GameObject("CharacterPortraitButton", typeof(RectTransform));
             var rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(130, 150);
+            rt.sizeDelta = new Vector2(0, 64);
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredHeight = 64; le.minHeight = 64;
+            var bgImg = go.AddComponent<Image>();          // background / hit target
+            bgImg.color = new Color(0.18f, 0.2f, 0.28f, 1f);
+            bgImg.raycastTarget = true;
 
-            var nameLbl = MakeText(go.transform, "Name", "Name", 13, TextAlignmentOptions.Center, bold: true);
+            // Portrait swatch (square on the left)
+            var swatch = new GameObject("Portrait", typeof(RectTransform));
+            swatch.transform.SetParent(go.transform, false);
+            var swatchImg = swatch.AddComponent<Image>();
+            swatchImg.preserveAspect = true;
+            swatchImg.color = new Color(0.4f, 0.4f, 0.5f, 1f);
+            swatchImg.raycastTarget = false;
+            var swatchRT = swatch.GetComponent<RectTransform>();
+            swatchRT.anchorMin = new Vector2(0, 0); swatchRT.anchorMax = new Vector2(0, 1);
+            swatchRT.pivot = new Vector2(0, 0.5f);
+            swatchRT.anchoredPosition = new Vector2(6, 0);
+            swatchRT.sizeDelta = new Vector2(56, -8);
+
+            // Name + level lines
+            var nameLbl = MakeText(go.transform, "Name", "Name", 16, TextAlignmentOptions.MidlineLeft, bold: true);
             var nameRT = nameLbl.GetComponent<RectTransform>();
-            nameRT.anchorMin = new Vector2(0, 0); nameRT.anchorMax = new Vector2(1, 0);
-            nameRT.pivot = new Vector2(0.5f, 0);
-            nameRT.anchoredPosition = new Vector2(0, 4);
-            nameRT.sizeDelta = new Vector2(-8, 22);
+            nameRT.anchorMin = new Vector2(0, 0); nameRT.anchorMax = new Vector2(1, 1);
+            nameRT.pivot = new Vector2(0, 0.5f);
+            nameRT.anchoredPosition = new Vector2(72, 6);
+            nameRT.sizeDelta = new Vector2(-80, -12);
             nameLbl.raycastTarget = false;
 
+            var lvLbl = MakeText(go.transform, "Lv", "Level 1", 11, TextAlignmentOptions.MidlineLeft);
+            var lvRT = lvLbl.GetComponent<RectTransform>();
+            lvRT.anchorMin = new Vector2(0, 0); lvRT.anchorMax = new Vector2(1, 0);
+            lvRT.pivot = new Vector2(0, 0);
+            lvRT.anchoredPosition = new Vector2(72, 6);
+            lvRT.sizeDelta = new Vector2(-80, 18);
+            lvLbl.color = new Color(0.7f, 0.85f, 1f);
+            lvLbl.raycastTarget = false;
+
             var pb = go.AddComponent<DungeonBlade.Characters.CharacterPortraitButton>();
-            pb.portraitImage = img;
+            pb.portraitImage = swatchImg;
             pb.nameLabel = nameLbl;
-            pb.frameImage = img;
+            pb.frameImage = bgImg;
 
             PrefabUtility.SaveAsPrefabAsset(go, path);
             UnityEngine.Object.DestroyImmediate(go);

@@ -239,11 +239,11 @@ namespace DungeonBlade.Characters
                     // Fallback: mesh bounds. Less accurate for characters with
                     // long coats / dresses (bounds bottom is the hem, not feet)
                     // but works for stripped-down rigs without named foot bones.
-                    Bounds b;
-                    if (TryGetWorldBounds(model, out b))
+                    Bounds bb;
+                    if (TryGetWorldBounds(model, out bb))
                     {
                         Vector3 localBottom = model.transform.parent.InverseTransformPoint(
-                            new Vector3(b.center.x, b.min.y, b.center.z));
+                            new Vector3(bb.center.x, bb.min.y, bb.center.z));
                         if (Mathf.Abs(localBottom.y) > 0.02f)
                         {
                             var lp = model.transform.localPosition;
@@ -251,6 +251,31 @@ namespace DungeonBlade.Characters
                             model.transform.localPosition = lp;
                             Debug.Log($"[CharacterInstantiator] Foot-aligned '{model.name}' by {-localBottom.y:F2}m via bounds fallback.");
                         }
+                    }
+                }
+
+                // Wait one more frame, then sanity-check that the mesh actually
+                // sits on the floor. Some Mixamo rigs have the foot bone BELOW
+                // the visible mesh (extra Armature offset) — bone-only align
+                // leaves the boots floating. If after bone alignment the mesh
+                // bottom is still well above local Y=0, shift the model down.
+                // We tolerate slight underground penetration (-0.10) because
+                // boot soles routinely poke below ankle bones, and a long coat
+                // or cape is allowed to drag below the floor.
+                yield return null;
+                if (model == null) yield break;
+
+                Bounds boundsAfter;
+                if (TryGetWorldBounds(model, out boundsAfter))
+                {
+                    Vector3 localBottom = model.transform.parent.InverseTransformPoint(
+                        new Vector3(boundsAfter.center.x, boundsAfter.min.y, boundsAfter.center.z));
+                    if (localBottom.y > 0.05f)
+                    {
+                        var lp = model.transform.localPosition;
+                        lp.y -= localBottom.y;
+                        model.transform.localPosition = lp;
+                        Debug.Log($"[CharacterInstantiator] Mesh-clamped '{model.name}' by an extra {-localBottom.y:F2}m (was floating).");
                     }
                 }
             }
