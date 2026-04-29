@@ -195,21 +195,8 @@ namespace DungeonBlade.Characters
             // they're often stale (zero or bind-pose only).
             yield return null;
             if (model == null) yield break;
-            ApplyRescaleAndAlign(model, data);
-        }
 
-        /// <summary>
-        /// Uniformly rescales the model so the world-space AABB of its visible
-        /// renderers is `targetHeight` tall, then offsets it vertically so the
-        /// AABB's bottom lands at the Player root's local Y=0 (feet on floor).
-        /// Both steps use post-pose Renderer.bounds, which means they only
-        /// produce correct results AFTER the Animator has run at least once.
-        /// </summary>
-        void ApplyRescaleAndAlign(GameObject model, CharacterData data)
-        {
-            if (model == null) return;
-
-            // 1. Rescale
+            // 1. Rescale step
             if (data.targetHeight > 0f)
             {
                 Bounds b;
@@ -224,17 +211,22 @@ namespace DungeonBlade.Characters
                 }
                 else
                 {
-                    Debug.LogWarning($"[CharacterInstantiator] Couldn't measure '{model.name}' bounds — leaving at default scale. Set CharacterData.modelScale manually if needed.");
+                    Debug.LogWarning($"[CharacterInstantiator] Couldn't measure '{model.name}' bounds — leaving at default scale.");
                 }
             }
+
+            // Wait another frame so the rescaled mesh's bounds are refreshed.
+            // Foot-align off pre-scale bounds leaves the model floating; the
+            // delta is invisible at low rescale ratios but obvious past 1.5x.
+            yield return null;
+            if (model == null) yield break;
 
             // 2. Foot-align (only if user didn't override modelOffset)
             if (data.modelOffset == Vector3.zero)
             {
                 Bounds b;
-                if (TryGetWorldBounds(model, out b))
+                if (TryGetWorldBounds(model, out b) && model.transform.parent != null)
                 {
-                    // World-space bottom of mesh in player-root local space
                     Vector3 localBottom = model.transform.parent.InverseTransformPoint(
                         new Vector3(b.center.x, b.min.y, b.center.z));
                     if (Mathf.Abs(localBottom.y) > 0.02f)
@@ -242,7 +234,35 @@ namespace DungeonBlade.Characters
                         var lp = model.transform.localPosition;
                         lp.y -= localBottom.y;
                         model.transform.localPosition = lp;
+                        Debug.Log($"[CharacterInstantiator] Foot-aligned '{model.name}' by {-localBottom.y:F2}m (bottom was at local Y={localBottom.y:F2}).");
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Edit-time path: applies rescale + align synchronously. Bounds may
+        /// be slightly stale here (no Animator pose), but it's good enough
+        /// for editor previews.
+        /// </summary>
+        void ApplyRescaleAndAlign(GameObject model, CharacterData data)
+        {
+            if (model == null) return;
+            Bounds b;
+            if (data.targetHeight > 0f && TryGetWorldBounds(model, out b) && b.size.y > 0.01f)
+            {
+                float ratio = data.targetHeight / b.size.y;
+                if (ratio < 0.95f || ratio > 1.05f) model.transform.localScale *= ratio;
+            }
+            if (data.modelOffset == Vector3.zero && TryGetWorldBounds(model, out b) && model.transform.parent != null)
+            {
+                Vector3 localBottom = model.transform.parent.InverseTransformPoint(
+                    new Vector3(b.center.x, b.min.y, b.center.z));
+                if (Mathf.Abs(localBottom.y) > 0.02f)
+                {
+                    var lp = model.transform.localPosition;
+                    lp.y -= localBottom.y;
+                    model.transform.localPosition = lp;
                 }
             }
         }
