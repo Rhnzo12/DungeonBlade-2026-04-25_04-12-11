@@ -105,8 +105,9 @@ namespace DungeonBlade.Characters
                 var oldOverlay = detailPortrait.transform.Find("Initial");
                 if (c.portrait != null)
                 {
-                    detailPortrait.sprite = c.portrait;
+                    detailPortrait.sprite = CharacterPortraitButton.CropTopFraction(c.portrait, c.portraitCropTopFraction);
                     detailPortrait.color = Color.white;
+                    detailPortrait.preserveAspect = true;
                     detailPortrait.enabled = true;
                     if (oldOverlay != null) oldOverlay.gameObject.SetActive(false);
                 }

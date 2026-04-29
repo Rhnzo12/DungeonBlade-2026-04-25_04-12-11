@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -34,8 +35,12 @@ namespace DungeonBlade.Characters
             {
                 if (d.portrait != null)
                 {
-                    portraitImage.sprite = d.portrait;
+                    portraitImage.sprite = CropTopFraction(d.portrait, d.portraitCropTopFraction);
                     portraitImage.color = Color.white;
+                    portraitImage.preserveAspect = true;
+                    // If a previous fallback added an initial-letter child, hide it.
+                    var leftover = portraitImage.transform.Find("Initial");
+                    if (leftover != null) leftover.gameObject.SetActive(false);
                 }
                 else
                 {
@@ -46,6 +51,43 @@ namespace DungeonBlade.Characters
                 }
             }
             if (nameLabel != null) nameLabel.text = d.displayName;
+        }
+
+        // Cache so we don't re-allocate a sub-sprite every time the user
+        // hovers a portrait button.
+        static readonly Dictionary<(Sprite source, int pct), Sprite> CropCache = new Dictionary<(Sprite, int), Sprite>();
+
+        /// <summary>
+        /// Returns a sprite that renders only the top `topFraction` of the
+        /// source image, leaving the lower body cropped out. Useful for
+        /// turning full-body character art into half-body portraits without
+        /// requiring the user to pre-crop their images.
+        /// </summary>
+        public static Sprite CropTopFraction(Sprite source, float topFraction)
+        {
+            if (source == null) return null;
+            if (topFraction >= 0.999f) return source;
+            topFraction = Mathf.Clamp(topFraction, 0.1f, 1f);
+
+            int pct = Mathf.RoundToInt(topFraction * 100f);
+            var key = (source, pct);
+            if (CropCache.TryGetValue(key, out var cached) && cached != null) return cached;
+
+            var tex = source.texture;
+            if (tex == null) return source;
+
+            // Sprite.Create works against the GPU texture — no Read/Write Enabled
+            // requirement, since we only specify a UV sub-rect.
+            int newH = Mathf.Max(1, Mathf.RoundToInt(source.rect.height * topFraction));
+            var rect = new Rect(
+                source.rect.x,
+                source.rect.y + source.rect.height - newH,   // top portion
+                source.rect.width,
+                newH);
+            var sub = Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), source.pixelsPerUnit);
+            sub.name = source.name + "_Top" + pct;
+            CropCache[key] = sub;
+            return sub;
         }
 
         /// <summary>

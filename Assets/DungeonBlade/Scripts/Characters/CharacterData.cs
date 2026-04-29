@@ -25,6 +25,10 @@ namespace DungeonBlade.Characters
         [Tooltip("Portrait for character select UI. Optional — falls back to a runtime camera snapshot.")]
         public Sprite portrait;
 
+        [Tooltip("Fraction of the portrait image to render, measured from the top. 1 = whole image, 0.5 = top half. Use ~0.55 for full-body images so only the head/upper torso shows in the portrait UI.")]
+        [Range(0.1f, 1f)]
+        public float portraitCropTopFraction = 0.55f;
+
         [Tooltip("Local position offset for the model relative to Visual. Use to align with the CharacterController's capsule.")]
         public Vector3 modelOffset = Vector3.zero;
 

@@ -17,7 +17,7 @@ MonoBehaviour:
   flavorText: A swift and cunning blade, graceful in motion.
   modelPrefab: {fileID: 919132149155446097, guid: b5ec11a5736a1db428cefe5455201a3f,
     type: 3}
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: ec3a7e10bd318a03d801a2ecfe8b94b8, type: 3}
   modelOffset: {x: 0, y: 0, z: 0}
   modelRotation: {x: 0, y: 0, z: 0}
   modelScale: 1

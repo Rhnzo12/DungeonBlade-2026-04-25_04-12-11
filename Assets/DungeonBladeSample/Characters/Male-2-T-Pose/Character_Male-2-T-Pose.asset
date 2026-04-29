@@ -17,7 +17,7 @@ MonoBehaviour:
   flavorText: A seasoned warrior, heavy-handed and resolute.
   modelPrefab: {fileID: 919132149155446097, guid: bbace033e1fef814aa79ca13eb997789,
     type: 3}
-  portrait: {fileID: 0}
+  portrait: {fileID: 21300000, guid: aeaf894f4f35aade97d8f99c1843b310, type: 3}
   modelOffset: {x: 0, y: 0, z: 0}
   modelRotation: {x: 0, y: 0, z: 0}
   modelScale: 1
