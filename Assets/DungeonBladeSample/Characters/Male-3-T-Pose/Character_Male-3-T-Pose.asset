@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Male-3-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_male_3_t_pose
-  displayName: Male 3
-  flavorText: A seasoned warrior, heavy-handed and resolute.
+  displayName: Shade
+  flavorText: An exiled assassin who fights from the dark. Strikes once. Rarely twice.
   modelPrefab: {fileID: 919132149155446097, guid: 3ffbe12a9f248054ebb6ea4875eb0dde,
     type: 3}
   portrait: {fileID: 21300000, guid: 9ccfb67286900aecf964ceafad2595ea, type: 3}

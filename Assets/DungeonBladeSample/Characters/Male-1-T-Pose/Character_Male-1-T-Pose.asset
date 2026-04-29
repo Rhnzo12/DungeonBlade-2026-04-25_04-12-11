@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Male-1-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_male_1_t_pose
-  displayName: Male 1
-  flavorText: A seasoned warrior, heavy-handed and resolute.
+  displayName: Kael
+  flavorText: A scarred swordsman of the southern reaches. Calm in the storm, lethal in close.
   modelPrefab: {fileID: 919132149155446097, guid: b8e2f0f289cb759448996ec300cc8d80,
     type: 3}
   portrait: {fileID: 21300000, guid: 076661d0fbb4e9d2b77f7bbb20a229b2, type: 3}

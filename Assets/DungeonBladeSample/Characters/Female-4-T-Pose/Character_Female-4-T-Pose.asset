@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Female-4-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_female_4_t_pose
-  displayName: Female 4
-  flavorText: A swift and cunning blade, graceful in motion.
+  displayName: Lyra
+  flavorText: A disgraced templar in white. Her sword is heavy with old oaths.
   modelPrefab: {fileID: 919132149155446097, guid: 4f42088544466dc4689e478f1cb0b177,
     type: 3}
   portrait: {fileID: 21300000, guid: b964880e684ed979ddf87c77cc031c4f, type: 3}

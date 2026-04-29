@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace DungeonBlade.Characters
@@ -111,21 +112,14 @@ namespace DungeonBlade.Characters
             instantiatedModel.transform.localEulerAngles = data.modelRotation;
             instantiatedModel.transform.localScale = Vector3.one * Mathf.Max(0.01f, data.modelScale);
 
-            // Normalize visible character size. Mixamo / mixed-source FBXs can
-            // import at wildly different scales (some come in at 0.5m tall,
-            // others at 1.8m). targetHeight forces a consistent silhouette so
-            // characters don't look shrunken next to NPCs and props.
-            if (data.targetHeight > 0f)
-            {
-                RescaleToHeight(instantiatedModel, data.targetHeight);
-            }
-
-            // Auto-align feet to origin (Y=0) if modelOffset wasn't manually set.
-            // Runs AFTER rescale so bounds reflect the final size.
-            if (data.modelOffset == Vector3.zero)
-            {
-                AlignFeetToOrigin(instantiatedModel);
-            }
+            // Rescale + foot-align after one frame so SkinnedMeshRenderer.bounds
+            // reflect the actual posed mesh, not the bind-pose transform that
+            // hasn't been baked yet at Instantiate-time. Without this delay the
+            // measurement comes back near-zero and the model appears shrunken.
+            if (Application.isPlaying)
+                StartCoroutine(DeferredRescaleAndAlign(instantiatedModel, data));
+            else
+                ApplyRescaleAndAlign(instantiatedModel, data);   // edit-time, no coroutine
 
             // Re-target animator avatar
             if (animator != null)
@@ -194,56 +188,82 @@ namespace DungeonBlade.Characters
             }
         }
 
-        /// <summary>
-        /// Uniformly rescales the instantiated model so its visible mesh AABB
-        /// is `targetHeight` world units tall. Uses the SkinnedMeshRenderer's
-        /// sharedMesh.bounds (mesh-local bind pose) to avoid the unreliable
-        /// world-space AABB on Awake().
-        /// </summary>
-        static void RescaleToHeight(GameObject model, float targetHeight)
+        IEnumerator DeferredRescaleAndAlign(GameObject model, CharacterData data)
         {
-            float currentHeight = MeasureMeshHeight(model);
-            if (currentHeight <= 0.01f) return;
-            float ratio = targetHeight / currentHeight;
-            // Don't bother rescaling for tiny adjustments — keeps modeller intent.
-            if (ratio > 0.95f && ratio < 1.05f) return;
-            model.transform.localScale *= ratio;
-            Debug.Log($"[CharacterInstantiator] Rescaled '{model.name}' by x{ratio:F2} (was {currentHeight:F2}m, target {targetHeight:F2}m).");
+            // Wait one frame so the Animator binds and SkinnedMeshRenderer
+            // bounds get refreshed; on the very first frame after Instantiate
+            // they're often stale (zero or bind-pose only).
+            yield return null;
+            if (model == null) yield break;
+            ApplyRescaleAndAlign(model, data);
         }
 
-        static float MeasureMeshHeight(GameObject model)
+        /// <summary>
+        /// Uniformly rescales the model so the world-space AABB of its visible
+        /// renderers is `targetHeight` tall, then offsets it vertically so the
+        /// AABB's bottom lands at the Player root's local Y=0 (feet on floor).
+        /// Both steps use post-pose Renderer.bounds, which means they only
+        /// produce correct results AFTER the Animator has run at least once.
+        /// </summary>
+        void ApplyRescaleAndAlign(GameObject model, CharacterData data)
         {
-            float minY = float.MaxValue, maxY = float.MinValue;
-            var skinned = model.GetComponentsInChildren<SkinnedMeshRenderer>();
-            foreach (var smr in skinned)
+            if (model == null) return;
+
+            // 1. Rescale
+            if (data.targetHeight > 0f)
             {
-                if (smr == null || smr.sharedMesh == null) continue;
-                var mb = smr.sharedMesh.bounds;
-                // Sample top + bottom corners at mesh local origin, then convert
-                // through the SMR transform into the model root's local space.
-                Vector3 worldTop    = smr.transform.TransformPoint(new Vector3(mb.center.x, mb.max.y, mb.center.z));
-                Vector3 worldBottom = smr.transform.TransformPoint(new Vector3(mb.center.x, mb.min.y, mb.center.z));
-                Vector3 localTop    = model.transform.InverseTransformPoint(worldTop);
-                Vector3 localBottom = model.transform.InverseTransformPoint(worldBottom);
-                if (localTop.y > maxY)    maxY = localTop.y;
-                if (localBottom.y < minY) minY = localBottom.y;
-            }
-            if (minY == float.MaxValue)
-            {
-                // Fallback to static MeshRenderers
-                var statics = model.GetComponentsInChildren<MeshRenderer>();
-                foreach (var r in statics)
+                Bounds b;
+                if (TryGetWorldBounds(model, out b) && b.size.y > 0.01f)
                 {
-                    if (r == null) continue;
-                    var b = r.bounds;
-                    Vector3 lTop    = model.transform.InverseTransformPoint(new Vector3(b.center.x, b.max.y, b.center.z));
-                    Vector3 lBottom = model.transform.InverseTransformPoint(new Vector3(b.center.x, b.min.y, b.center.z));
-                    if (lTop.y > maxY)    maxY = lTop.y;
-                    if (lBottom.y < minY) minY = lBottom.y;
+                    float ratio = data.targetHeight / b.size.y;
+                    if (ratio < 0.95f || ratio > 1.05f)
+                    {
+                        model.transform.localScale *= ratio;
+                        Debug.Log($"[CharacterInstantiator] Rescaled '{model.name}' x{ratio:F2} (was {b.size.y:F2}m, target {data.targetHeight:F2}m)");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[CharacterInstantiator] Couldn't measure '{model.name}' bounds — leaving at default scale. Set CharacterData.modelScale manually if needed.");
                 }
             }
-            if (minY == float.MaxValue || maxY == float.MinValue) return 0f;
-            return Mathf.Max(0f, maxY - minY);
+
+            // 2. Foot-align (only if user didn't override modelOffset)
+            if (data.modelOffset == Vector3.zero)
+            {
+                Bounds b;
+                if (TryGetWorldBounds(model, out b))
+                {
+                    // World-space bottom of mesh in player-root local space
+                    Vector3 localBottom = model.transform.parent.InverseTransformPoint(
+                        new Vector3(b.center.x, b.min.y, b.center.z));
+                    if (Mathf.Abs(localBottom.y) > 0.02f)
+                    {
+                        var lp = model.transform.localPosition;
+                        lp.y -= localBottom.y;
+                        model.transform.localPosition = lp;
+                    }
+                }
+            }
+        }
+
+        static bool TryGetWorldBounds(GameObject root, out Bounds bounds)
+        {
+            bounds = default;
+            bool any = false;
+            foreach (var smr in root.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (smr == null) continue;
+                if (!any) { bounds = smr.bounds; any = true; }
+                else bounds.Encapsulate(smr.bounds);
+            }
+            foreach (var mr in root.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (mr == null) continue;
+                if (!any) { bounds = mr.bounds; any = true; }
+                else bounds.Encapsulate(mr.bounds);
+            }
+            return any;
         }
 
         static Transform FindDeepChild(Transform parent, string name)

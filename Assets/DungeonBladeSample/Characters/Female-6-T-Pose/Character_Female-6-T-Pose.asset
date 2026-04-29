@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Female-6-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_female_6_t_pose
-  displayName: Female 6
-  flavorText: A swift and cunning blade, graceful in motion.
+  displayName: Nyx
+  flavorText: A hooded shadow from the shrouded north. Speaks only when steel does first.
   modelPrefab: {fileID: 919132149155446097, guid: dbf636c85c5f8ee49bafc40765464f4f,
     type: 3}
   portrait: {fileID: 21300000, guid: 81a8b0eb5bc05ab648b762c7c5f49734, type: 3}

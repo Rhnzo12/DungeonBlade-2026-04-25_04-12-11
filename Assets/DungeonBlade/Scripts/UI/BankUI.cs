@@ -480,11 +480,12 @@ namespace DungeonBlade.UI
     {
         public BankUI bankUI;
         public BankSystem bankSystem;
-        public float interactRange = 3f;
+        public float interactRange = 5f;
         public GameObject promptUI;   // "Press E to interact"
         public KeyCode interactKey = KeyCode.E;
 
         bool warnedMissingUI;
+        bool warnedNoPlayer;
 
         void Awake()
         {
@@ -493,6 +494,7 @@ namespace DungeonBlade.UI
             // bankUI was null. Auto-resolve from the scene as a safety net.
             if (bankUI == null) bankUI = FindObjectOfType<BankUI>(includeInactive: true);
             if (bankSystem == null) bankSystem = FindObjectOfType<BankSystem>(includeInactive: true);
+            Debug.Log($"[BankNPC] Awake — bankUI={(bankUI ? bankUI.name : "<null>")}, bankSystem={(bankSystem ? "found" : "<null>")}, interactRange={interactRange}m");
 
             // Old prefabs only had an empty "Prompt" GameObject and no permanent
             // "Sign" — without these the NPC is just an unmarked yellow capsule.
@@ -547,17 +549,30 @@ namespace DungeonBlade.UI
 
         void Update()
         {
+            // Last-chance ref recovery — BankUI may have been instantiated
+            // after this NPC's Awake (additive scene loads, lazy bootstrap, etc.)
+            if (bankUI == null) bankUI = FindObjectOfType<BankUI>(includeInactive: true);
+            if (bankSystem == null) bankSystem = FindObjectOfType<BankSystem>(includeInactive: true);
+
             var player = GameObject.FindGameObjectWithTag("Player");
-            if (player == null) return;
+            if (player == null)
+            {
+                if (!warnedNoPlayer)
+                {
+                    Debug.LogWarning("[BankNPC] No GameObject tagged 'Player' in scene — interaction won't trigger.");
+                    warnedNoPlayer = true;
+                }
+                return;
+            }
             float d = Vector3.Distance(transform.position, player.transform.position);
             bool inRange = d <= interactRange;
             if (promptUI != null) promptUI.SetActive(inRange);
 
             if (inRange && Input.GetKeyDown(interactKey))
             {
+                Debug.Log($"[BankNPC] E pressed @ {d:F1}m. bankUI={(bankUI ? "ok" : "null")}, bankSystem={(bankSystem ? "ok" : "null")}");
                 if (bankUI != null)
                 {
-                    Debug.Log($"[BankNPC] Opening bank UI...");
                     bankUI.Show(bankSystem);
                 }
                 else if (!warnedMissingUI)

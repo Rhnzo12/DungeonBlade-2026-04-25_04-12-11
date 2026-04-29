@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Female-5-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_female_5_t_pose
-  displayName: Female 5
-  flavorText: A swift and cunning blade, graceful in motion.
+  displayName: Vex
+  flavorText: A street rat from the lower districts. Loud, fearless, and surprisingly hard to hit.
   modelPrefab: {fileID: 919132149155446097, guid: b5ec11a5736a1db428cefe5455201a3f,
     type: 3}
   portrait: {fileID: 21300000, guid: ec3a7e10bd318a03d801a2ecfe8b94b8, type: 3}

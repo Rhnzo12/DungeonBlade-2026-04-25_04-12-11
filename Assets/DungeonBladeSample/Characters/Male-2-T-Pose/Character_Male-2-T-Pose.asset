@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Character_Male-2-T-Pose
   m_EditorClassIdentifier: 
   characterId: char_male_2_t_pose
-  displayName: Male 2
-  flavorText: A seasoned warrior, heavy-handed and resolute.
+  displayName: Roan
+  flavorText: A wandering tracker turned blade-for-hire. Quick on his feet, quicker on the trigger.
   modelPrefab: {fileID: 919132149155446097, guid: bbace033e1fef814aa79ca13eb997789,
     type: 3}
   portrait: {fileID: 21300000, guid: aeaf894f4f35aade97d8f99c1843b310, type: 3}
