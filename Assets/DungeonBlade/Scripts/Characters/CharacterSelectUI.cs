@@ -25,7 +25,9 @@ namespace DungeonBlade.Characters
         public GameObject rootPanel;
         public Transform portraitRowParent;
         public GameObject portraitButtonPrefab;
-        public Image detailPortrait;
+        public Image detailPortrait;            // 2D portrait fallback
+        public RawImage detailPreviewImage;     // 3D model preview (RenderTexture)
+        public CharacterPreviewStage previewStage;
         public TMP_Text detailName;
         public TMP_Text detailFlavor;
         public TMP_Text detailStats;
@@ -105,7 +107,18 @@ namespace DungeonBlade.Characters
         void UpdateDetails(CharacterData c)
         {
             if (c == null) return;
-            if (detailPortrait != null)
+
+            // 3D preview path takes priority — render the live model into the
+            // RawImage, hide the 2D portrait swatch.
+            if (previewStage != null && detailPreviewImage != null)
+            {
+                previewStage.Show(c);
+                detailPreviewImage.texture = previewStage.Texture;
+                detailPreviewImage.color = Color.white;
+                detailPreviewImage.enabled = true;
+                if (detailPortrait != null) detailPortrait.enabled = false;
+            }
+            else if (detailPortrait != null)
             {
                 // Drop any leftover initial overlay first; we'll re-add it for fallback.
                 var oldOverlay = detailPortrait.transform.Find("Initial");

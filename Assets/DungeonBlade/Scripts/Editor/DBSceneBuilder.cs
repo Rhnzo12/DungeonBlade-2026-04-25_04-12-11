@@ -84,16 +84,10 @@ namespace DungeonBlade.EditorTools
             cnTrigger.center = new Vector3(0, 1, 0);
             charNPC.AddComponent<DungeonBlade.Characters.CharacterChangeNPC>();
 
-            // Dungeon portal (trigger -> loads dungeon scene)
-            var portal = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            portal.name = "DungeonPortal";
-            portal.transform.position = new Vector3(5, 1.5f, 10);
-            portal.transform.localScale = new Vector3(2, 3, 0.5f);
-            var portalMat = DBMaterialHelper.Create(new Color(0.4f, 0.2f, 0.8f), new Color(0.6f, 0.3f, 1f));
-            portal.GetComponent<Renderer>().sharedMaterial = portalMat;
-            var sceneTrigger = portal.AddComponent<DungeonBlade.Runtime.SceneTransitionTrigger>();
-            sceneTrigger.targetScene = "Dungeon_ForsakenKeep";
-            portal.GetComponent<BoxCollider>().isTrigger = true;
+            // Off-screen 3D character preview rig (camera + spawn point + RT).
+            // Lives 100m away on the X axis so its render output doesn't pollute
+            // the gameplay camera. CharacterSelectUI.previewStage is wired below.
+            var previewStage = BuildCharacterPreviewStage();
 
             // Inventory + Bank UI canvases
             var invCanvas = DBHUDBuilder.BuildInventoryCanvas();
@@ -116,8 +110,11 @@ namespace DungeonBlade.EditorTools
                 }
             }
 
-            // Character select canvas — auto-opens on first entry to Lobby if no selection saved
-            DBHUDBuilder.BuildCharacterSelectCanvas();
+            // Character select canvas — auto-opens on every Play in Lobby
+            var selectCanvasGO = DBHUDBuilder.BuildCharacterSelectCanvas();
+            var selectUI = selectCanvasGO.GetComponent<DungeonBlade.Characters.CharacterSelectUI>();
+            if (selectUI != null && previewStage != null)
+                selectUI.previewStage = previewStage.GetComponent<DungeonBlade.Characters.CharacterPreviewStage>();
 
             // EventSystem — required for UI clicks to register
             EnsureEventSystem();
@@ -520,6 +517,51 @@ namespace DungeonBlade.EditorTools
             if (r == null) return;
             var mat = DBMaterialHelper.Create(color, emissive);
             r.sharedMaterial = mat;
+        }
+
+        /// <summary>
+        /// Off-screen rig the CharacterSelectUI samples for the live 3D model
+        /// preview. Stage root sits 100m off the gameplay area so its mesh and
+        /// camera never bleed into the player view.
+        /// </summary>
+        static GameObject BuildCharacterPreviewStage()
+        {
+            var stage = new GameObject("CharacterPreviewStage");
+            stage.transform.position = new Vector3(100, 0, 0);
+
+            // Spawn point — where each character model is parented.
+            var spawn = new GameObject("SpawnPoint");
+            spawn.transform.SetParent(stage.transform, false);
+            spawn.transform.localPosition = Vector3.zero;
+
+            // Dedicated camera (child) — the stage component points it
+            // at chest height after framing in Awake.
+            var camGO = new GameObject("PreviewCamera");
+            camGO.transform.SetParent(stage.transform, false);
+            camGO.transform.localPosition = new Vector3(0, 1.15f, -3.2f);
+            var cam = camGO.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.05f, 0.06f, 0.10f, 1f);
+            cam.fieldOfView = 35f;
+            cam.nearClipPlane = 0.05f;
+            cam.farClipPlane = 30f;
+            cam.depth = -2;
+
+            // Soft fill light so the model isn't a silhouette.
+            var lightGO = new GameObject("PreviewFill");
+            lightGO.transform.SetParent(stage.transform, false);
+            lightGO.transform.localPosition = new Vector3(2, 3, -2);
+            lightGO.transform.localEulerAngles = new Vector3(35, -25, 0);
+            var fill = lightGO.AddComponent<Light>();
+            fill.type = LightType.Directional;
+            fill.intensity = 1.3f;
+            fill.color = new Color(1f, 0.97f, 0.9f);
+            fill.cullingMask = ~0;
+
+            var stageComp = stage.AddComponent<DungeonBlade.Characters.CharacterPreviewStage>();
+            stageComp.previewCamera = cam;
+            stageComp.spawnPoint = spawn.transform;
+            return stage;
         }
 
         static void BuildBankUI(GameObject bootstrap)

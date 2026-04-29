@@ -333,17 +333,30 @@ namespace DungeonBlade.EditorTools
             listRT.pivot = new Vector2(0.5f, 1f);
             listRT.anchoredPosition = Vector2.zero; listRT.sizeDelta = new Vector2(0, 0);
 
-            // ── Center: large portrait preview ──
-            var preview = new GameObject("PortraitPreview");
-            preview.transform.SetParent(root.transform, false);
-            var previewImg = preview.AddComponent<Image>();
-            previewImg.preserveAspect = true;
-            previewImg.color = new Color(0.3f, 0.35f, 0.45f, 0.85f);
-            var prRT = preview.GetComponent<RectTransform>();
+            // ── Center: 3D model preview rendered to a RenderTexture ──
+            // Sibling 2D Image kept underneath as a fallback (used only if no
+            // CharacterPreviewStage is wired in the scene).
+            var previewWrapper = new GameObject("PortraitPreview", typeof(RectTransform));
+            previewWrapper.transform.SetParent(root.transform, false);
+            var prRT = previewWrapper.GetComponent<RectTransform>();
             prRT.anchorMin = new Vector2(0.5f, 0.5f); prRT.anchorMax = new Vector2(0.5f, 0.5f);
             prRT.pivot = new Vector2(0.5f, 0.5f);
-            prRT.anchoredPosition = new Vector2(-160, 80);   // slightly left + above center
+            prRT.anchoredPosition = new Vector2(-160, 80);
             prRT.sizeDelta = new Vector2(420, 540);
+
+            var previewImg = previewWrapper.AddComponent<Image>();
+            previewImg.preserveAspect = true;
+            previewImg.color = new Color(0.3f, 0.35f, 0.45f, 0.85f);
+            previewImg.enabled = false;        // hidden when 3D preview is active
+
+            var previewRawGO = new GameObject("PreviewRaw", typeof(RectTransform));
+            previewRawGO.transform.SetParent(previewWrapper.transform, false);
+            var rawRT = previewRawGO.GetComponent<RectTransform>();
+            rawRT.anchorMin = Vector2.zero; rawRT.anchorMax = Vector2.one;
+            rawRT.sizeDelta = Vector2.zero; rawRT.anchoredPosition = Vector2.zero;
+            var previewRaw = previewRawGO.AddComponent<RawImage>();
+            previewRaw.raycastTarget = false;
+            previewRaw.color = new Color(0.5f, 0.5f, 0.55f, 0.4f);   // soft tint until RT arrives
 
             // ── Bottom-center: name / flavor / stats card + Enter button ──
             var card = MakePanel(root.transform, "InfoCard",
@@ -409,12 +422,15 @@ namespace DungeonBlade.EditorTools
             selectUI.portraitRowParent = list.transform;
             selectUI.portraitButtonPrefab = portraitPrefab;
             selectUI.detailPortrait = previewImg;
+            selectUI.detailPreviewImage = previewRaw;
             selectUI.detailName = detailName;
             selectUI.detailFlavor = detailFlavor;
             selectUI.detailStats = detailStats;
             selectUI.confirmButton = btnConfirm.GetComponent<Button>();
             selectUI.closeButton = btnClose.GetComponent<Button>();
             selectUI.openOnSceneLoad = true;
+            // selectUI.previewStage is wired by DBSceneBuilder after both
+            // canvases and the preview rig exist in the scene.
 
             return canvas;
         }
