@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using DungeonBlade.Items;
 using DungeonBlade.Inventory;
+using EquipmentSlot = DungeonBlade.Items.EquipmentSlot;
 
 namespace DungeonBlade.Save
 {

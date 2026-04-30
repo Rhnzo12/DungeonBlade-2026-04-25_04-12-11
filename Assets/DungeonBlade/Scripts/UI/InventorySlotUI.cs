@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using DungeonBlade.Inventory;
 using DungeonBlade.Items;
+using EquipmentSlot = DungeonBlade.Items.EquipmentSlot;
 
 namespace DungeonBlade.UI
 {
