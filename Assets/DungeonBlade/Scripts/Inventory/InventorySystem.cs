@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using DungeonBlade.Items;
+using EquipmentSlot = DungeonBlade.Items.EquipmentSlot;
 
 namespace DungeonBlade.Inventory
 {
